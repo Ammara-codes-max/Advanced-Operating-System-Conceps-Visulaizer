@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- Top Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="mb-1">OS Concepts Visualizer</h1>
+    <p class="text-muted mb-0">
+      Click any module below to explore OS algorithms with visualization.
+    </p>
+  </div>
+
+  <!-- Logout Button -->
+  <div>
+    <a href="/logout" class="btn btn-outline-danger">
+      <i class="bi bi-box-arrow-right"></i> Logout
+    </a>
+  </div>
+</div>
+
+<!-- Dashboard Cards -->
+<div class="row g-4">
+
+  <div class="col-lg-4 col-md-6">
+    <a href="/cpu_scheduling" class="card-link">
+      <div class="card-glass dashboard-card">
+        <h5>⚙️ CPU Scheduling</h5>
+        <p>FCFS, SJF, Priority, Round Robin</p>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-lg-4 col-md-6">
+    <a href="/deadlock" class="card-link">
+      <div class="card-glass dashboard-card">
+        <h5>🔒 Deadlock Handling</h5>
+        <p>Detection, Prevention, Avoidance</p>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-lg-4 col-md-6">
+    <a href="/resource_allocation" class="card-link">
+      <div class="card-glass dashboard-card">
+        <h5>📊 Resource Allocation</h5>
+        <p>Safe State, Banker’s Algorithm</p>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-lg-4 col-md-6">
+    <a href="/memory_management" class="card-link">
+      <div class="card-glass dashboard-card">
+        <h5>🧠 Memory Management</h5>
+        <p>Paging, Segmentation, Allocation</p>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-lg-4 col-md-6">
+    <a href="/file_systems" class="card-link">
+      <div class="card-glass dashboard-card">
+        <h5>📁 File Systems</h5>
+        <p>Directory & Allocation Methods</p>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-lg-4 col-md-6">
+    <a href="/synchronization" class="card-link">
+      <div class="card-glass dashboard-card">
+        <h5>🔁 Process Synchronization</h5>
+        <p>Mutex, Semaphore, Critical Section</p>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-lg-4 col-md-6">
+    <a href="/io_management" class="card-link">
+      <div class="card-glass dashboard-card">
+        <h5>💽 I/O Management</h5>
+        <p>Buffering, Caching, Spooling</p>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-lg-4 col-md-6">
+    <a href="/processes_threads" class="card-link">
+      <div class="card-glass dashboard-card">
+        <h5>🧵 Processes & Threads</h5>
+        <p>Lifecycle, Multithreading</p>
+      </div>
+    </a>
+  </div>
+
+</div>
+
+{% endblock %}

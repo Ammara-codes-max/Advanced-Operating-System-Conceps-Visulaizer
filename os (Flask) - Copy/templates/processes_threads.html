@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="mb-4 text-info">
+  <i class="bi bi-diagram-3"></i> Processes & Threads
+</h2>
+
+<ul class="nav nav-tabs mb-4">
+  <li class="nav-item">
+    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#processTab">
+      Process Simulation
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#threadTab">
+      Thread Simulation
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#ipcTab">
+      IPC
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content">
+
+<!-- ================= PROCESS SIMULATION ================= -->
+<div class="tab-pane fade show active" id="processTab">
+  <div class="row">
+
+    <div class="col-md-5 glass p-4">
+      <h5>Add Process</h5>
+
+      <input id="p_pid" class="form-control mb-2" placeholder="PID (e.g. P1)" value="P1">
+      <input id="p_arrival" class="form-control mb-2" placeholder="Arrival Time" value="0">
+      <input id="p_burst" class="form-control mb-3" placeholder="Burst Time" value="10">
+
+      <button id="addProcess" class="btn btn-secondary w-100 mb-3">
+        Add Process
+      </button>
+
+      <input id="maxTime" class="form-control mb-3" placeholder="Max Simulation Time" value="100">
+
+      <button id="runProcess" class="btn btn-primary w-100">
+        Simulate Processes
+      </button>
+    </div>
+
+    <div class="col-md-7 glass p-4">
+      <h5>Process Results</h5>
+      <div id="processResult"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= THREAD SIMULATION ================= -->
+<div class="tab-pane fade" id="threadTab">
+  <div class="row">
+
+    <div class="col-md-5 glass p-4">
+      <h5>Thread Simulation</h5>
+
+      <select id="threadModel" class="form-select mb-3">
+        <option value="USER_LEVEL">User Level</option>
+        <option value="KERNEL_LEVEL">Kernel Level</option>
+        <option value="HYBRID">Hybrid</option>
+      </select>
+
+      <input id="t_tid" class="form-control mb-2" placeholder="Thread ID" value="T1">
+      <input id="t_pid" class="form-control mb-3" placeholder="Process ID" value="P1">
+
+      <button id="addThread" class="btn btn-secondary w-100 mb-3">
+        Add Thread
+      </button>
+
+      <button id="runThread" class="btn btn-primary w-100">
+        Simulate Threads
+      </button>
+    </div>
+
+    <div class="col-md-7 glass p-4">
+      <h5>Thread Results</h5>
+      <div id="threadResult"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= IPC ================= -->
+<div class="tab-pane fade" id="ipcTab">
+  <div class="row">
+
+    <div class="col-md-5 glass p-4">
+      <h5>Inter Process Communication</h5>
+
+      <input id="ipcFrom" class="form-control mb-2" placeholder="From PID" value="P1">
+      <input id="ipcTo" class="form-control mb-2" placeholder="To PID" value="P2">
+      <input id="ipcMsg" class="form-control mb-3" placeholder="Message" value="Hello">
+
+      <button id="sendIPC" class="btn btn-success w-100 mb-2">
+        Send Message
+      </button>
+
+      <button id="recvIPC" class="btn btn-info w-100">
+        Receive Message
+      </button>
+    </div>
+
+    <div class="col-md-7 glass p-4">
+      <h5>IPC Results</h5>
+      <div id="ipcResult"></div>
+    </div>
+
+  </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+/* ================= PROCESS SIMULATION ================= */
+let processes = [];
+
+document.getElementById("addProcess").addEventListener("click", () => {
+  const pid = document.getElementById("p_pid").value.trim();
+  const arrival = Number(document.getElementById("p_arrival").value);
+  const burst = Number(document.getElementById("p_burst").value);
+
+  if (!pid) {
+    processResult.innerHTML = "<p class='text-danger'>PID is required</p>";
+    return;
+  }
+
+  processes.push({ pid, arrival_time: arrival, burst_time: burst });
+
+  processResult.innerHTML = `
+    <p class="text-success">Process added</p>
+    <ul>
+      ${processes.map(p =>
+        `<li><b>${p.pid}</b> | Arrival=${p.arrival_time} | Burst=${p.burst_time}</li>`
+      ).join("")}
+    </ul>
+  `;
+});
+
+document.getElementById("runProcess").addEventListener("click", () => {
+  if (processes.length === 0) {
+    processResult.innerHTML =
+      "<p class='text-warning'>Add at least one process first</p>";
+    return;
+  }
+
+  fetch("/processes_threads/simulate_processes", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      processes,
+      max_time: Number(document.getElementById("maxTime").value || 100)
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    let html = "<h6 class='text-info'>Execution Timeline</h6><ul>";
+    data.timeline.forEach(t => {
+      html += `<li>Time ${t.time} → <b>${t.pid}</b> (${t.state})</li>`;
+    });
+    html += "</ul>";
+    processResult.innerHTML = html;
+  });
+});
+
+/* ================= THREAD SIMULATION ================= */
+let threads = [];
+
+document.getElementById("addThread").addEventListener("click", () => {
+  threads.push({
+    tid: document.getElementById("t_tid").value,
+    pid: document.getElementById("t_pid").value
+  });
+
+  threadResult.innerHTML = `
+    <p class="text-success">Thread added</p>
+    <ul>
+      ${threads.map(t => `<li>${t.tid} → Process ${t.pid}</li>`).join("")}
+    </ul>
+  `;
+});
+
+document.getElementById("runThread").addEventListener("click", () => {
+  if (threads.length === 0) {
+    threadResult.innerHTML =
+      "<p class='text-warning'>Add thread first</p>";
+    return;
+  }
+
+  fetch("/processes_threads/simulate_threads", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ threads, max_time: 50 })
+  })
+  .then(r => r.json())
+  .then(data => {
+    let html = "<h6 class='text-info'>Thread Execution</h6><ul>";
+    data.execution.forEach(e => {
+      html += `<li>Thread <b>${e.tid}</b> → ${e.state}</li>`;
+    });
+    html += "</ul>";
+    threadResult.innerHTML = html;
+  });
+});
+
+/* ================= IPC ================= */
+document.getElementById("sendIPC").addEventListener("click", () => {
+  fetch("/processes_threads/ipc", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      operation:"send",
+      from_pid: ipcFrom.value,
+      to_pid: ipcTo.value,
+      message: ipcMsg.value
+    })
+  })
+  .then(() => {
+    ipcResult.innerHTML =
+      "<p class='text-success'>Message sent successfully</p>";
+  });
+});
+
+document.getElementById("recvIPC").addEventListener("click", () => {
+  fetch("/processes_threads/ipc", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      operation:"receive",
+      to_pid: ipcTo.value
+    })
+  })
+  .then(r => r.json())
+  .then(d => {
+    ipcResult.innerHTML = d.message
+      ? `<p><b>Received:</b> ${d.message}</p>`
+      : "<p class='text-warning'>No messages</p>";
+  });
+});
+</script>
+{% endblock %}

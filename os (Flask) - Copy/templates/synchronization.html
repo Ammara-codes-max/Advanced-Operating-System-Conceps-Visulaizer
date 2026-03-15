@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="mb-4 text-info">
+  <i class="bi bi-arrow-repeat"></i> Process Synchronization
+</h2>
+
+<ul class="nav nav-tabs mb-4">
+  <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#semTab">Semaphore</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#mutexTab">Mutex</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#pcTab">Producer-Consumer</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#diningTab">Dining Philosophers</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#rwTab">Readers-Writers</button></li>
+</ul>
+
+<div class="tab-content">
+
+<!-- ================= SEMAPHORE ================= -->
+<div class="tab-pane fade show active" id="semTab">
+<div class="row">
+  <div class="col-md-5 glass p-4">
+    <h5>Semaphore</h5>
+    <input id="semName" class="form-control mb-2" value="sem1">
+    <input id="semValue" class="form-control mb-2" value="1">
+    <input id="semPid" class="form-control mb-3" value="P1">
+    <button id="semWait" class="btn btn-warning w-100 mb-2">Wait (P)</button>
+    <button id="semSignal" class="btn btn-success w-100">Signal (V)</button>
+  </div>
+  <div class="col-md-7 glass p-4">
+    <h5>Results</h5>
+    <div id="semResult"></div>
+  </div>
+</div>
+</div>
+
+<!-- ================= MUTEX ================= -->
+<div class="tab-pane fade" id="mutexTab">
+<div class="row">
+  <div class="col-md-5 glass p-4">
+    <h5>Mutex</h5>
+    <input id="mutexName" class="form-control mb-2" value="mutex1">
+    <input id="mutexPid" class="form-control mb-3" value="P1">
+    <button id="mutexLock" class="btn btn-warning w-100 mb-2">Lock</button>
+    <button id="mutexUnlock" class="btn btn-success w-100">Unlock</button>
+  </div>
+  <div class="col-md-7 glass p-4">
+    <h5>Results</h5>
+    <div id="mutexResult"></div>
+  </div>
+</div>
+</div>
+
+<!-- ================= PRODUCER CONSUMER ================= -->
+<div class="tab-pane fade" id="pcTab">
+<div class="row">
+  <div class="col-md-5 glass p-4">
+    <h5>Producer Consumer</h5>
+    <input id="pcSize" class="form-control mb-2" value="5">
+    <input id="pcPid" class="form-control mb-2" value="Producer0">
+    <input id="pcItem" class="form-control mb-3" value="item1">
+    <button id="produceBtn" class="btn btn-primary w-100 mb-2">Produce</button>
+    <button id="consumeBtn" class="btn btn-secondary w-100">Consume</button>
+  </div>
+  <div class="col-md-7 glass p-4">
+    <h5>Results</h5>
+    <div id="pcResult"></div>
+  </div>
+</div>
+</div>
+
+<!-- ================= DINING ================= -->
+<div class="tab-pane fade" id="diningTab">
+<div class="row">
+  <div class="col-md-5 glass p-4">
+    <h5>Dining Philosophers</h5>
+    <input id="dpCount" class="form-control mb-2" value="5">
+    <input id="dpId" class="form-control mb-3" value="0">
+    <button id="dpPick" class="btn btn-warning w-100 mb-2">Pick Up</button>
+    <button id="dpPut" class="btn btn-success w-100">Put Down</button>
+  </div>
+  <div class="col-md-7 glass p-4">
+    <h5>Results</h5>
+    <div id="dpResult"></div>
+  </div>
+</div>
+</div>
+
+<!-- ================= READERS WRITERS ================= -->
+<div class="tab-pane fade" id="rwTab">
+<div class="row">
+  <div class="col-md-5 glass p-4">
+    <h5>Readers - Writers</h5>
+    <input id="rwPid" class="form-control mb-3" value="Reader0">
+    <button id="startRead" class="btn btn-primary w-100 mb-2">Start Read</button>
+    <button id="endRead" class="btn btn-secondary w-100 mb-2">End Read</button>
+    <button id="startWrite" class="btn btn-warning w-100 mb-2">Start Write</button>
+    <button id="endWrite" class="btn btn-success w-100">End Write</button>
+  </div>
+  <div class="col-md-7 glass p-4">
+    <h5>Results</h5>
+    <div id="rwResult"></div>
+  </div>
+</div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+/* ========== SEMAPHORE ========== */
+semWait.onclick = () => {
+  call("/synchronization/semaphore",
+    {operation:"wait", semaphore_name:semName.value, initial_value:+semValue.value, process_id:semPid.value},
+    d => {
+      semResult.innerHTML = d.success
+        ? `<p class="text-success">✅ Process <b>${semPid.value}</b> entered critical section.<br>Semaphore value = <b>${d.value}</b></p>`
+        : `<p class="text-warning">⏳ Process <b>${semPid.value}</b> blocked.<br>Waiting queue size = <b>${d.waiting}</b></p>`;
+    }
+  );
+};
+
+semSignal.onclick = () => {
+  call("/synchronization/semaphore",
+    {operation:"signal", semaphore_name:semName.value},
+    d => {
+      semResult.innerHTML =
+        `<p class="text-success">🔔 Signal performed.<br>Semaphore value = <b>${d.value}</b></p>`
+        + (d.unblocked ? `<p>🟢 Process <b>${d.unblocked}</b> unblocked.</p>` : "");
+    }
+  );
+};
+
+/* ========== MUTEX ========== */
+mutexLock.onclick = () => {
+  call("/synchronization/mutex",
+    {operation:"lock", mutex_name:mutexName.value, process_id:mutexPid.value},
+    d => {
+      mutexResult.innerHTML = d.success
+        ? `<p class="text-success">🔒 Mutex locked by <b>${mutexPid.value}</b></p>`
+        : `<p class="text-warning">⏳ <b>${mutexPid.value}</b> waiting for mutex</p>`;
+    }
+  );
+};
+
+mutexUnlock.onclick = () => {
+  call("/synchronization/mutex",
+    {operation:"unlock", mutex_name:mutexName.value},
+    d => {
+      mutexResult.innerHTML =
+        `<p class="text-success">🔓 Mutex unlocked</p>`
+        + (d.unblocked ? `<p>🟢 <b>${d.unblocked}</b> acquired mutex</p>` : "");
+    }
+  );
+};
+
+/* ========== PRODUCER CONSUMER ========== */
+produceBtn.onclick = () => {
+  call("/synchronization/producer_consumer",
+    {operation:"produce", buffer_size:+pcSize.value, process_id:pcPid.value, item:pcItem.value},
+    d => {
+      pcResult.innerHTML = d.success
+        ? `<p class="text-success">📦 <b>${pcItem.value}</b> produced by ${pcPid.value}</p><p>Buffer: ${d.buffer.join(", ")}</p>`
+        : `<p class="text-warning">⛔ Buffer full. Producer blocked.</p>`;
+    }
+  );
+};
+
+consumeBtn.onclick = () => {
+  call("/synchronization/producer_consumer",
+    {operation:"consume", buffer_size:+pcSize.value, process_id:pcPid.value},
+    d => {
+      pcResult.innerHTML = d.success
+        ? `<p class="text-success">📤 Item consumed by ${pcPid.value}</p><p>Buffer: ${d.buffer.join(", ")}</p>`
+        : `<p class="text-warning">⛔ Buffer empty. Consumer waiting.</p>`;
+    }
+  );
+};
+
+/* ========== DINING PHILOSOPHERS ========== */
+dpPick.onclick = () => {
+  call("/synchronization/dining_philosophers",
+    {operation:"pickup", num_philosophers:+dpCount.value, philosopher_id:+dpId.value},
+    d => {
+      dpResult.innerHTML = d.success
+        ? `<p class="text-success">🍽 Philosopher ${dpId.value} started eating</p>`
+        : `<p class="text-warning">⏳ Philosopher ${dpId.value} waiting for chopsticks</p>`;
+    }
+  );
+};
+
+dpPut.onclick = () => {
+  call("/synchronization/dining_philosophers",
+    {operation:"putdown", num_philosophers:+dpCount.value, philosopher_id:+dpId.value},
+    () => {
+      dpResult.innerHTML = `<p class="text-success">✔ Philosopher ${dpId.value} put down chopsticks</p>`;
+    }
+  );
+};
+
+/* ========== READERS WRITERS ========== */
+function rw(op){
+  call("/synchronization/readers_writers",
+    {operation:op, process_id:rwPid.value},
+    d => {
+      rwResult.innerHTML = `
+        <p class="text-info">📘 Active readers: <b>${d.read_count}</b></p>
+        <p class="text-info">✍ Writer active: <b>${d.writer_active}</b></p>
+      `;
+    }
+  );
+}
+startRead.onclick  = () => rw("start_read");
+endRead.onclick    = () => rw("end_read");
+startWrite.onclick = () => rw("start_write");
+endWrite.onclick   = () => rw("end_write");
+
+/* ========== COMMON CALL ========== */
+function call(url,data,cb){
+ fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)})
+ .then(r=>r.json()).then(cb)
+ .catch(()=>alert("Server Error"));
+}
+</script>
+{% endblock %}

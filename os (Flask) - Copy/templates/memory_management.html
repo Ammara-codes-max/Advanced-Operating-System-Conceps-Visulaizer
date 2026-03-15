@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="mb-4 text-info">
+  <i class="bi bi-memory"></i> Memory Management
+</h2>
+
+<ul class="nav nav-tabs mb-4">
+  <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#alloc">Allocation</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#replace">Page Replacement</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#virtual">Virtual Memory</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#segment">Segmentation</button></li>
+</ul>
+
+<div class="tab-content">
+
+<!-- ================= ALLOCATION ================= -->
+<div class="tab-pane fade show active" id="alloc">
+  <div class="row">
+    <div class="col-md-5 glass p-4">
+      <h5>Memory Allocation</h5>
+
+      <select id="allocAlgo" class="form-select mb-3">
+        <option value="first_fit">First Fit</option>
+        <option value="best_fit">Best Fit</option>
+        <option value="worst_fit">Worst Fit</option>
+      </select>
+
+      <input id="procSize" class="form-control mb-2" value="50">
+      <input id="procId" class="form-control mb-3" value="P1">
+
+      <button id="allocBtn" class="btn btn-primary w-100 mb-2">Allocate Memory</button>
+      <button id="deallocBtn" class="btn btn-warning w-100">Deallocate</button>
+    </div>
+
+    <div class="col-md-7 glass p-4">
+      <h5>Memory Visualization</h5>
+      <canvas id="memCanvas" width="600" height="100"></canvas>
+      <div id="memTable" class="mt-3"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= PAGE REPLACEMENT ================= -->
+<div class="tab-pane fade" id="replace">
+  <div class="glass p-4">
+    <h5>Page Replacement</h5>
+
+    <select id="repAlgo" class="form-select mb-2">
+      <option value="fifo">FIFO</option>
+      <option value="lru">LRU</option>
+      <option value="optimal">Optimal</option>
+    </select>
+
+    <input id="pageSeq" class="form-control mb-2" value="7,0,1,2,0,3,0,4">
+    <input id="frameCount" class="form-control mb-3" value="3">
+
+    <button id="runReplace" class="btn btn-primary w-100">Run</button>
+    <div id="repResult" class="mt-3"></div>
+  </div>
+</div>
+
+<!-- ================= VIRTUAL MEMORY ================= -->
+<div class="tab-pane fade" id="virtual">
+  <div class="glass p-4">
+    <h5>Virtual Memory</h5>
+
+    <input id="vmFrames" class="form-control mb-2" value="4">
+    <input id="vmPageSize" class="form-control mb-2" value="4096">
+    <input id="vmAddr" class="form-control mb-3" value="8192">
+
+    <button id="vmTranslate" class="btn btn-primary w-100">Translate</button>
+    <div id="vmResult" class="mt-3"></div>
+  </div>
+</div>
+
+<!-- ================= SEGMENTATION ================= -->
+<div class="tab-pane fade" id="segment">
+  <div class="glass p-4">
+    <h5>Segmentation</h5>
+
+    <input id="segNo" class="form-control mb-2" value="0">
+    <input id="segOffset" class="form-control mb-3" value="100">
+
+    <button id="segTranslate" class="btn btn-primary w-100">Translate</button>
+    <div id="segResult" class="mt-3"></div>
+  </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+/* ================= ALLOCATION ================= */
+let blocks = [{ start:0, size:100, process_id:null, is_free:true }];
+
+function drawMemory(){
+  const c=document.getElementById("memCanvas");
+  const ctx=c.getContext("2d");
+  ctx.clearRect(0,0,c.width,c.height);
+
+  let total=blocks.reduce((s,b)=>s+b.size,0);
+  let x=0;
+
+  blocks.forEach(b=>{
+    let w=(b.size/total)*c.width;
+    ctx.fillStyle=b.is_free?"#22c55e":"#ef4444";
+    ctx.fillRect(x,20,w,60);
+    ctx.fillStyle="#fff";
+    ctx.fillText(b.is_free?"Free":b.process_id,x+w/2,55);
+    x+=w;
+  });
+}
+drawMemory();
+
+allocBtn.onclick=()=>{
+ fetch("/memory_management/allocate",{
+  method:"POST",headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({
+    algorithm:allocAlgo.value,
+    blocks:blocks,
+    process_size:+procSize.value,
+    process_id:procId.value
+  })
+ }).then(r=>r.json()).then(d=>{
+  blocks=d.blocks;
+  drawMemory();
+ });
+};
+
+deallocBtn.onclick=()=>{
+ fetch("/memory_management/deallocate",{
+  method:"POST",headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({ blocks, process_id:procId.value })
+ }).then(r=>r.json()).then(d=>{
+  blocks=d.blocks;
+  drawMemory();
+ });
+};
+
+/* ================= PAGE REPLACEMENT ================= */
+runReplace.onclick=()=>{
+ fetch("/memory_management/page_replacement",{
+  method:"POST",headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({
+    algorithm:repAlgo.value,
+    page_sequence:pageSeq.value.split(",").map(Number),
+    num_frames:+frameCount.value
+  })
+ }).then(r=>r.json()).then(d=>{
+  repResult.innerHTML=`
+    <p><b>Page Faults:</b> ${d.page_faults}</p>
+    <p><b>Frames:</b> ${JSON.stringify(d.frames)}</p>
+  `;
+ });
+};
+
+/* ================= VIRTUAL MEMORY ================= */
+vmTranslate.onclick=()=>{
+ fetch("/memory_management/virtual_memory",{
+  method:"POST",headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({
+    action:"translate",
+    virtual_address:+vmAddr.value
+  })
+ }).then(r=>r.json()).then(d=>{
+  vmResult.innerHTML=
+   `<p>Virtual Address → Physical Address: <b>${d.physical_address}</b></p>`;
+ });
+};
+
+/* ================= SEGMENTATION ================= */
+segTranslate.onclick=()=>{
+ fetch("/memory_management/segmentation",{
+  method:"POST",headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({
+    action:"translate",
+    segment_number:+segNo.value,
+    offset:+segOffset.value
+  })
+ }).then(r=>r.json()).then(d=>{
+  segResult.innerHTML=
+   `<p>Segment Address → Physical Address: <b>${d.physical_address}</b></p>`;
+ });
+};
+
+</script>
+{% endblock %}

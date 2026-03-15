@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>I/O Management</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Bootstrap -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+
+<style>
+body{
+    background: radial-gradient(circle at top, #0b1220, #050814);
+    font-family: "Inter", sans-serif;
+    color:#e5e7eb;
+}
+.glass{
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(14px);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.6);
+}
+label{color:#9ca3af}
+.form-control,.form-select{
+    background: rgba(0,0,0,.35);
+    border:1px solid rgba(255,255,255,.15);
+    color:#fff;
+}
+.form-control:focus,.form-select:focus{
+    border-color:#38bdf8;
+    box-shadow:none;
+}
+.btn-primary{
+    background: linear-gradient(135deg,#2563eb,#38bdf8);
+    border:none;
+}
+.btn-secondary{
+    background: rgba(255,255,255,.15);
+    border:none;
+}
+.table{
+    color:#fff;
+}
+.table thead{
+    background: rgba(255,255,255,.1);
+}
+.result-box{
+    min-height:200px;
+}
+.result-box h6{
+    color:#38bdf8;
+}
+.result-box p{
+    color:#e5e7eb;
+}
+</style>
+</head>
+
+<body class="p-4">
+
+<h2 class="mb-4"><i class="bi bi-hdd-network"></i> I/O Management</h2>
+
+<div class="row g-4">
+
+<!-- LEFT -->
+<div class="col-md-7">
+<div class="glass">
+<h5 class="mb-3"><i class="bi bi-arrow-repeat"></i> I/O Scheduling</h5>
+
+<label>Scheduling Algorithm</label>
+<select id="io-algorithm" class="form-select mb-3">
+<option value="fcfs">FCFS</option>
+<option value="sstf">SSTF</option>
+<option value="scan">SCAN</option>
+</select>
+
+<div id="requests">
+
+<div class="row g-2 mb-3 request">
+<div class="col"><input class="form-control" placeholder="ID" value="R1"></div>
+<div class="col"><input class="form-control" placeholder="Process" value="P1"></div>
+<div class="col">
+<select class="form-select">
+<option>Read</option>
+<option>Write</option>
+</select>
+</div>
+<div class="col"><input type="number" class="form-control" placeholder="Block" value="50"></div>
+<div class="col"><input type="number" class="form-control" placeholder="Arrival" value="0"></div>
+</div>
+
+</div>
+
+<button id="addRequest" class="btn btn-secondary mt-2">
+<i class="bi bi-plus-circle"></i> Add Request
+</button>
+
+<button id="scheduleIO" class="btn btn-primary mt-2 ms-2">
+<i class="bi bi-play-fill"></i> Schedule I/O
+</button>
+
+</div>
+</div>
+
+<!-- RIGHT -->
+<div class="col-md-5">
+<div class="glass result-box">
+<h5><i class="bi bi-graph-up"></i> Results</h5>
+<div id="results" class="mt-3 text-muted">
+Run I/O scheduling to view results.
+</div>
+</div>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+document.getElementById("addRequest").onclick = ()=>{
+    const div = document.createElement("div");
+    div.className="row g-2 mb-3 request";
+    div.innerHTML=`
+    <div class="col"><input class="form-control" placeholder="ID"></div>
+    <div class="col"><input class="form-control" placeholder="Process"></div>
+    <div class="col">
+        <select class="form-select"><option>Read</option><option>Write</option></select>
+    </div>
+    <div class="col"><input type="number" class="form-control" placeholder="Block"></div>
+    <div class="col"><input type="number" class="form-control" placeholder="Arrival"></div>
+    `;
+    document.getElementById("requests").appendChild(div);
+};
+
+document.getElementById("scheduleIO").onclick = ()=>{
+    const algorithm = document.getElementById("io-algorithm").value;
+    const reqs = [];
+
+    document.querySelectorAll(".request").forEach(r=>{
+        const inputs = r.querySelectorAll("input,select");
+        reqs.push({
+            id: inputs[0].value,
+            process_id: inputs[1].value,
+            type: inputs[2].value.toLowerCase(),
+            block_number: parseInt(inputs[3].value),
+            arrival_time: parseFloat(inputs[4].value)
+        });
+    });
+
+    fetch("/io_management/schedule",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({algorithm,requests:reqs})
+    })
+    .then(r=>r.json())
+    .then(d=>{
+        let html=`
+        <h6>Statistics</h6>
+        <p>Total Seek Time: <b>${d.total_seek_time}</b></p>
+        <p>Average Waiting Time: <b>${d.avg_waiting_time}</b></p>
+        <p>Average Seek Time: <b>${d.avg_seek_time}</b></p>
+        <h6 class="mt-3">Schedule</h6>
+        <table class="table table-sm">
+        <thead><tr><th>Request</th><th>Start</th><th>End</th></tr></thead><tbody>`;
+        d.schedule.forEach(s=>{
+            html+=`<tr><td>${s.request.request_id}</td><td>${s.start_time}</td><td>${s.completion_time}</td></tr>`;
+        });
+        html+="</tbody></table>";
+        document.getElementById("results").innerHTML=html;
+    })
+    .catch(()=>{
+        document.getElementById("results").innerHTML="<p class='text-danger'>Error running I/O scheduling</p>";
+    });
+};
+</script>
+
+</body>
+</html>

@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 class="mb-4 text-info">
+  <i class="bi bi-diagram-2"></i> Resource Allocation
+</h2>
+
+<div class="row">
+
+  <!-- ================= LEFT PANEL ================= -->
+  <div class="col-md-5 glass p-4">
+
+    <!-- POLICY -->
+    <label class="form-label text-light">Allocation Policy</label>
+    <select id="ra-policy" class="form-select mb-4">
+      <option value="bankers">Banker's Algorithm</option>
+      <option value="fcfs">FCFS</option>
+      <option value="priority">Priority</option>
+      <option value="round_robin">Round Robin</option>
+      <option value="fair_share">Fair Share</option>
+    </select>
+
+    <!-- ================= RESOURCES ================= -->
+    <h5 class="text-info">Resources</h5>
+    <div id="ra-resources">
+
+      <div class="resource-input mb-3">
+        <div class="row">
+          <div class="col">
+            <input class="form-control" name="rid" value="R1">
+          </div>
+          <div class="col">
+            <input class="form-control" type="number" name="total_instances" value="10">
+          </div>
+        </div>
+      </div>
+
+      <div class="resource-input mb-3">
+        <div class="row">
+          <div class="col">
+            <input class="form-control" name="rid" value="R2">
+          </div>
+          <div class="col">
+            <input class="form-control" type="number" name="total_instances" value="5">
+          </div>
+        </div>
+      </div>
+
+      <div class="resource-input mb-3">
+        <div class="row">
+          <div class="col">
+            <input class="form-control" name="rid" value="R3">
+          </div>
+          <div class="col">
+            <input class="form-control" type="number" name="total_instances" value="7">
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <button id="add-resource-ra" class="btn btn-secondary w-100 mb-4">
+      <i class="bi bi-plus-circle"></i> Add Resource
+    </button>
+
+    <!-- ================= PROCESSES ================= -->
+    <h5 class="text-info">Processes</h5>
+    <div id="ra-processes">
+
+      <div class="process-input-ra mb-3">
+        <input class="form-control mb-2" name="pid" value="P1">
+        <input class="form-control mb-2" name="max_resources" value="5,4,3">
+        <input class="form-control mb-2" name="allocated_resources" value="0,1,0">
+        <input class="form-control" type="number" name="priority" value="1">
+      </div>
+
+    </div>
+
+    <button id="add-process-ra" class="btn btn-secondary w-100 mb-3">
+      <i class="bi bi-plus-circle"></i> Add Process
+    </button>
+
+    <button id="allocate-resources" class="btn btn-primary w-100">
+      <i class="bi bi-play-fill"></i> Allocate Resources
+    </button>
+
+  </div>
+
+  <!-- ================= RIGHT PANEL ================= -->
+  <div class="col-md-7 glass p-4">
+    <h5 class="text-info">Results</h5>
+    <div id="ra-results" class="text-light"></div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let resourceCountRA = 3;
+let processCountRA = 1;
+
+/* ================= ADD RESOURCE ================= */
+document.getElementById("add-resource-ra").addEventListener("click", () => {
+  resourceCountRA++;
+
+  document.getElementById("ra-resources").insertAdjacentHTML("beforeend", `
+    <div class="resource-input mb-3">
+      <div class="row">
+        <div class="col">
+          <input class="form-control" name="rid" value="R${resourceCountRA}">
+        </div>
+        <div class="col">
+          <input class="form-control" type="number" name="total_instances" value="5">
+        </div>
+      </div>
+    </div>
+  `);
+});
+
+/* ================= ADD PROCESS ================= */
+document.getElementById("add-process-ra").addEventListener("click", () => {
+  processCountRA++;
+
+  document.getElementById("ra-processes").insertAdjacentHTML("beforeend", `
+    <div class="process-input-ra mb-3">
+      <input class="form-control mb-2" name="pid" value="P${processCountRA}">
+      <input class="form-control mb-2" name="max_resources" value="5,4,3">
+      <input class="form-control mb-2" name="allocated_resources" value="0,1,0">
+      <input class="form-control" type="number" name="priority" value="1">
+    </div>
+  `);
+});
+
+/* ================= ALLOCATE ================= */
+document.getElementById("allocate-resources").addEventListener("click", () => {
+
+  const policy = document.getElementById("ra-policy").value;
+
+  const resources = [...document.querySelectorAll("#ra-resources .resource-input")]
+    .map(r => ({
+      rid: r.querySelector("[name=rid]").value,
+      total_instances: +r.querySelector("[name=total_instances]").value
+    }));
+
+  const processes = [...document.querySelectorAll("#ra-processes .process-input-ra")]
+    .map(p => ({
+      pid: p.querySelector("[name=pid]").value,
+      max_resources: p.querySelector("[name=max_resources]").value.split(",").map(Number),
+      allocated_resources: p.querySelector("[name=allocated_resources]").value.split(",").map(Number),
+      priority: +p.querySelector("[name=priority]").value
+    }));
+
+  fetch("/resource_allocation/allocate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ policy, processes, resources })
+  })
+  .then(res => res.json())
+  .then(data => {
+
+    let html = "";
+
+    if (data.result && data.result.safe) {
+      html += `
+        <h6 class="text-success">✅ System is in SAFE state</h6>
+        <p><strong>Safe Sequence:</strong> ${data.result.safe_sequence.join(" → ")}</p>
+      `;
+    }
+    else if (data.result && data.result.safe === false) {
+      html += `
+        <h6 class="text-danger">❌ System is NOT safe</h6>
+        <p>Deadlock may occur.</p>
+      `;
+    }
+    else {
+      html += `<p class="text-warning">⚠️ Invalid or incomplete input</p>`;
+    }
+
+    document.getElementById("ra-results").innerHTML = html;
+  })
+  .catch(() => {
+    document.getElementById("ra-results").innerHTML =
+      "<p class='text-danger'>Allocation failed</p>";
+  });
+});
+</script>
+{% endblock %}

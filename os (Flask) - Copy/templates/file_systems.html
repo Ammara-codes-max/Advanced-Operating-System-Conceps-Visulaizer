@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container-fluid">
+
+  <h2 class="mb-4 text-accent">
+    <i class="bi bi-folder2-open"></i> File Systems
+  </h2>
+
+  <div class="row g-4">
+
+    <!-- LEFT COLUMN -->
+    <div class="col-lg-6">
+
+      <!-- FILE OPERATIONS -->
+      <div class="card-glass mb-4">
+        <h5 class="mb-3">
+          <i class="bi bi-file-earmark-plus"></i> File Operations
+        </h5>
+
+        <div class="mb-3">
+          <label class="form-label">Allocation Method</label>
+          <select class="form-select" id="allocation-method">
+            <option value="contiguous">Contiguous</option>
+            <option value="linked">Linked</option>
+            <option value="indexed">Indexed</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Total Disk Blocks</label>
+          <input type="number" class="form-control" id="total-blocks" value="100">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Directory Path</label>
+          <input type="text" class="form-control" id="file-path" value="/">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">File Name</label>
+          <input type="text" class="form-control" id="file-name" value="file1.txt">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">File Size (KB)</label>
+          <input type="number" class="form-control" id="file-size" value="2048">
+        </div>
+
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary" id="create-file">
+            <i class="bi bi-plus-circle"></i> Create File
+          </button>
+          <button class="btn btn-danger" id="delete-file">
+            <i class="bi bi-trash"></i> Delete File
+          </button>
+        </div>
+      </div>
+
+      <!-- DIRECTORY OPERATIONS -->
+      <div class="card-glass">
+        <h5 class="mb-3">
+          <i class="bi bi-folder-plus"></i> Directory Operations
+        </h5>
+
+        <div class="mb-3">
+          <label class="form-label">Parent Directory</label>
+          <input type="text" class="form-control" id="dir-path" value="/">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Directory Name</label>
+          <input type="text" class="form-control" id="dir-name" value="subdir">
+        </div>
+
+        <button class="btn btn-success" id="create-directory">
+          <i class="bi bi-folder-check"></i> Create Directory
+        </button>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="col-lg-6">
+      <div class="card-glass h-100">
+        <h5 class="mb-3">
+          <i class="bi bi-bar-chart"></i> Results
+        </h5>
+        <div id="results" class="text-muted">
+          Perform an operation to view disk allocation results.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ======================= JS ======================= -->
+<script>
+document.getElementById("create-file").onclick = function () {
+  fetch("/file_systems/create_file", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      path: document.getElementById("file-path").value,
+      name: document.getElementById("file-name").value,
+      size: parseInt(document.getElementById("file-size").value),
+      allocation_method: document.getElementById("allocation-method").value,
+      total_blocks: parseInt(document.getElementById("total-blocks").value)
+    })
+  })
+  .then(r => r.json())
+  .then(d => showResult("Create File", d))
+  .catch(err => console.error(err));
+};
+
+document.getElementById("delete-file").onclick = function () {
+  fetch("/file_systems/delete_file", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      path: document.getElementById("file-path").value,
+      name: document.getElementById("file-name").value,
+      allocation_method: document.getElementById("allocation-method").value,
+      total_blocks: parseInt(document.getElementById("total-blocks").value)
+    })
+  })
+  .then(r => r.json())
+  .then(d => showResult("Delete File", d))
+  .catch(err => console.error(err));
+};
+
+document.getElementById("create-directory").onclick = function () {
+  fetch("/file_systems/create_directory", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      path: document.getElementById("dir-path").value,
+      name: document.getElementById("dir-name").value,
+      total_blocks: parseInt(document.getElementById("total-blocks").value)
+    })
+  })
+  .then(r => r.json())
+  .then(d => showResult("Create Directory", d))
+  .catch(err => console.error(err));
+};
+
+function showResult(title, data) {
+  let html = `
+    <div class="alert ${data.success ? "alert-success" : "alert-danger"}">
+      <h6>${title}</h6>
+      <p><strong>Status:</strong> ${data.success ? "Success" : "Failed"}</p>
+  `;
+  if (data.disk_usage) {
+    html += `
+      <p><strong>Disk Usage:</strong>
+      ${data.disk_usage.allocated_blocks}/${data.disk_usage.total_blocks}
+      (${data.disk_usage.usage_percentage.toFixed(2)}%)
+      </p>
+    `;
+  }
+  html += "</div>";
+  document.getElementById("results").innerHTML = html;
+}
+</script>
+
+{% endblock %}

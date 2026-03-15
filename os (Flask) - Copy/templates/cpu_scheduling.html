@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1 class="mb-3">CPU Scheduling Algorithms</h1>
+<p class="text-muted mb-4">
+  Configure processes and visualize CPU scheduling with Gantt Chart.
+</p>
+
+<div class="row g-4">
+
+  <!-- INPUT PANEL -->
+  <div class="col-lg-6">
+    <div class="card-glass p-4">
+
+      <h4 class="mb-3">⚙️ Input Processes</h4>
+
+      <form id="scheduling-form">
+
+        <div class="mb-3">
+          <label class="form-label">Algorithm</label>
+          <select class="form-select" id="algorithm">
+            <option value="FCFS">First Come First Served (FCFS)</option>
+            <option value="SJF">Shortest Job First (SJF)</option>
+            <option value="Round Robin">Round Robin</option>
+            <option value="Priority">Priority Scheduling</option>
+          </select>
+        </div>
+
+        <div class="mb-3" id="time-quantum-group" style="display:none;">
+          <label class="form-label">Time Quantum</label>
+          <input type="number" class="form-control" id="time-quantum" value="2">
+        </div>
+
+        <div id="processes">
+          <div class="process-input mb-3">
+            <h6>Process 1</h6>
+            <div class="row g-2">
+              <div class="col">
+                <input type="text" class="form-control" name="pid" value="P1">
+              </div>
+              <div class="col">
+                <input type="number" class="form-control" name="arrival" value="0">
+              </div>
+              <div class="col">
+                <input type="number" class="form-control" name="burst" value="5">
+              </div>
+              <div class="col">
+                <input type="number" class="form-control" name="priority" value="1">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-3">
+          <button type="button" class="btn btn-secondary" id="add-process">
+            ➕ Add Process
+          </button>
+          <button type="button" class="btn btn-primary" id="run-scheduling">
+            ▶ Run Scheduling
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- RESULTS PANEL -->
+  <div class="col-lg-6">
+
+    <div class="card-glass p-4 mb-4">
+      <h4>📊 Results</h4>
+      <div id="results" class="mt-3 text-light"></div>
+    </div>
+
+    <div class="card-glass p-4">
+      <h4>📈 Gantt Chart</h4>
+      <canvas id="gantt-canvas" width="700" height="250"
+        style="background:#fff;border-radius:8px;margin-top:10px;">
+      </canvas>
+      <button type="button" class="btn btn-info mt-3" id="animate-gantt">
+        🎞 Animate Gantt Chart
+      </button>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ===================== JAVASCRIPT ===================== -->
+<script>
+let processCount = 1;
+let ganttData = [];
+
+/* Algorithm change */
+document.getElementById('algorithm').addEventListener('change', function () {
+  document.getElementById('time-quantum-group').style.display =
+    this.value === 'Round Robin' ? 'block' : 'none';
+});
+
+/* Add process */
+document.getElementById('add-process').addEventListener('click', function () {
+  processCount++;
+  const processesDiv = document.getElementById('processes');
+
+  const newProcess = document.createElement('div');
+  newProcess.className = 'process-input mb-3';
+  newProcess.innerHTML = `
+    <h6>Process ${processCount}</h6>
+    <div class="row g-2">
+      <div class="col"><input type="text" class="form-control" name="pid" value="P${processCount}"></div>
+      <div class="col"><input type="number" class="form-control" name="arrival" value="0"></div>
+      <div class="col"><input type="number" class="form-control" name="burst" value="5"></div>
+      <div class="col"><input type="number" class="form-control" name="priority" value="1"></div>
+    </div>
+  `;
+  processesDiv.appendChild(newProcess);
+});
+
+/* Run scheduling */
+document.getElementById('run-scheduling').addEventListener('click', function () {
+
+  const algorithm = document.getElementById('algorithm').value;
+  const timeQuantum = document.getElementById('time-quantum').value;
+
+  const processes = [];
+  document.querySelectorAll('.process-input').forEach(input => {
+    processes.push({
+      pid: input.querySelector('[name="pid"]').value,
+      arrival: Number(input.querySelector('[name="arrival"]').value),
+      burst: Number(input.querySelector('[name="burst"]').value),
+      priority: Number(input.querySelector('[name="priority"]').value)
+    });
+  });
+
+  fetch('/cpu_scheduling/run', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({
+      algorithm: algorithm,
+      time_quantum: Number(timeQuantum),
+      processes: processes
+    })
+  })
+  .then(res => res.json())
+  .then(displayResults)
+  .catch(() => {
+    document.getElementById('results').innerHTML =
+      '<p class="text-danger">Error running scheduling.</p>';
+  });
+});
+
+/* Display results (FIXED) */
+function displayResults(result) {
+
+  if (!result || !result.processes) {
+    document.getElementById('results').innerHTML =
+      '<p class="text-danger">Invalid scheduling result.</p>';
+    return;
+  }
+
+  let html = `
+    <p><strong>Execution Order:</strong>
+      ${result.order ? result.order.join(' → ') : 'N/A'}
+    </p>
+    <p><strong>Average Waiting Time:</strong>
+      ${Number(result.avg_waiting || 0).toFixed(2)}
+    </p>
+    <p><strong>Average Turnaround Time:</strong>
+      ${Number(result.avg_turnaround || 0).toFixed(2)}
+    </p>
+
+    <table class="table table-dark table-sm mt-3">
+      <thead>
+        <tr>
+          <th>Process</th>
+          <th>Waiting Time</th>
+          <th>Turnaround Time</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  result.processes.forEach(p => {
+    html += `
+      <tr>
+        <td>${p.pid}</td>
+        <td>${p.waiting_time}</td>
+        <td>${p.turnaround_time}</td>
+      </tr>
+    `;
+  });
+
+  html += '</tbody></table>';
+
+  document.getElementById('results').innerHTML = html;
+  ganttData = result.gantt_chart || [];
+}
+
+/* Animate Gantt */
+document.getElementById('animate-gantt').addEventListener('click', function () {
+  if (!ganttData.length) {
+    alert('Run scheduling first.');
+    return;
+  }
+  animateGanttChart(ganttData);
+});
+
+/* Gantt Chart */
+function animateGanttChart(data) {
+  const canvas = document.getElementById('gantt-canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const startX = 60;
+  const barY = 70;
+  const barHeight = 30;
+  const axisY = canvas.height - 40;
+
+  const totalTime = data.reduce((s, i) => s + i[1], 0);
+  const scale = (canvas.width - 120) / totalTime;
+
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(startX, axisY);
+  ctx.lineTo(canvas.width - 60, axisY);
+  ctx.stroke();
+
+  ctx.font = "12px Arial";
+  ctx.textAlign = "center";
+
+  for (let t = 0; t <= totalTime; t++) {
+    const x = startX + t * scale;
+    ctx.beginPath();
+    ctx.moveTo(x, axisY);
+    ctx.lineTo(x, axisY + 6);
+    ctx.stroke();
+    ctx.fillText(t, x, axisY + 20);
+  }
+
+  let currentTime = 0;
+  data.forEach((item, index) => {
+    setTimeout(() => {
+      const x = startX + currentTime * scale;
+      const width = item[1] * scale;
+
+      ctx.fillStyle = ['#4CAF50','#2196F3','#FF9800','#9C27B0'][index % 4];
+      ctx.fillRect(x, barY, width, barHeight);
+      ctx.strokeRect(x, barY, width, barHeight);
+      ctx.fillStyle = "#000";
+      ctx.fillText(item[0], x + width / 2, barY + 20);
+
+      currentTime += item[1];
+    }, index * 500);
+  });
+}
+</script>
+
+{% endblock %}

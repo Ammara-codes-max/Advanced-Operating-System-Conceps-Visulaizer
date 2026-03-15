@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1 class="mb-3">Deadlock Handling</h1>
+<p class="text-muted mb-4">
+  Banker's Algorithm, Deadlock Detection & Resource Request Simulation
+</p>
+
+<div class="card-glass">
+
+<ul class="nav nav-tabs mb-4">
+  <li class="nav-item">
+    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#bankers">🔐 Banker's Algorithm</button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#detect">🔍 Deadlock Detection</button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#request">🔁 Resource Request</button>
+  </li>
+</ul>
+
+<div class="tab-content">
+
+<!-- ================= BANKERS ================= -->
+<div class="tab-pane fade show active" id="bankers">
+  <div class="card-glass">
+
+    <h4>Banker's Algorithm</h4>
+
+    <h6>Resources</h6>
+    <div id="resources-bankers"></div>
+    <button class="btn btn-secondary mb-3" id="add-resource-bankers">➕ Add Resource</button>
+
+    <h6>Processes</h6>
+    <div id="processes-bankers"></div>
+    <button class="btn btn-secondary mb-3" id="add-process-bankers">➕ Add Process</button>
+
+    <button class="btn btn-primary" id="run-bankers">▶ Run Banker's Algorithm</button>
+    <div id="bankers-results" class="mt-3"></div>
+
+  </div>
+</div>
+
+<!-- ================= DETECTION ================= -->
+<div class="tab-pane fade" id="detect">
+  <div class="card-glass">
+
+    <h4>Deadlock Detection</h4>
+
+    <label class="form-label">Detection Method</label>
+    <select class="form-select mb-3" id="detect-method">
+      <option value="wait_for_graph">Wait-for Graph</option>
+      <option value="resource_allocation">Resource Allocation</option>
+    </select>
+
+    <div id="wait-for-input">
+      <div id="wait-for-edges"></div>
+      <button class="btn btn-secondary mb-3" id="add-edge">➕ Add Edge</button>
+    </div>
+
+    <div id="resource-alloc-input" style="display:none;">
+      <div id="resources-detect"></div>
+      <button class="btn btn-secondary mb-2" id="add-resource-detect">➕ Add Resource</button>
+      <div id="processes-detect"></div>
+      <button class="btn btn-secondary mb-2" id="add-process-detect">➕ Add Process</button>
+    </div>
+
+    <button class="btn btn-primary" id="run-detect">▶ Detect Deadlock</button>
+    <div id="detect-results" class="mt-3"></div>
+
+  </div>
+</div>
+
+<!-- ================= REQUEST ================= -->
+<div class="tab-pane fade" id="request">
+  <div class="card-glass">
+
+    <h4>Resource Request Simulation</h4>
+
+    <div id="resources-request"></div>
+    <button class="btn btn-secondary mb-2" id="add-resource-request">➕ Add Resource</button>
+
+    <div id="processes-request"></div>
+    <button class="btn btn-secondary mb-2" id="add-process-request">➕ Add Process</button>
+
+    <label class="form-label mt-2">Requesting Process</label>
+    <input class="form-control mb-2" id="request-process" value="P1">
+
+    <label class="form-label">Requested Resources</label>
+    <input class="form-control mb-3" id="request-resources" value="1,0,2">
+
+    <button class="btn btn-primary" id="run-request">▶ Simulate Request</button>
+    <div id="request-results" class="mt-3"></div>
+
+  </div>
+</div>
+
+</div>
+</div>
+
+<!-- ================= FULL JS (WORKING) ================= -->
+<script>
+/* ---------- BANKERS ---------- */
+let rb=0,pb=0;
+function addBR(){rb++;document.getElementById("resources-bankers").insertAdjacentHTML("beforeend",
+`<div class="row mb-2"><div class="col"><input class="form-control" value="R${rb}"></div><div class="col"><input class="form-control" value="10"></div></div>`);}
+function addBP(){pb++;document.getElementById("processes-bankers").insertAdjacentHTML("beforeend",
+`<div class="row mb-2"><div class="col"><input class="form-control" value="P${pb}"></div><div class="col"><input class="form-control" value="5,4,3"></div><div class="col"><input class="form-control" value="0,1,0"></div></div>`);}
+addBR();addBR();addBR();addBP();
+document.getElementById("add-resource-bankers").onclick=addBR;
+document.getElementById("add-process-bankers").onclick=addBP;
+
+document.getElementById("run-bankers").onclick=function(){
+  const resources=[],processes=[];
+  document.querySelectorAll("#resources-bankers .row").forEach(r=>{
+    resources.push({rid:r.children[0].children[0].value,total_instances:+r.children[1].children[0].value});
+  });
+  document.querySelectorAll("#processes-bankers .row").forEach(p=>{
+    processes.push({
+      pid:p.children[0].children[0].value,
+      max_resources:p.children[1].children[0].value.split(",").map(Number),
+      allocated_resources:p.children[2].children[0].value.split(",").map(Number)
+    });
+  });
+  fetch("/deadlock/bankers",{method:"POST",headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({resources,processes})})
+  .then(r=>r.json()).then(d=>{
+    document.getElementById("bankers-results").innerHTML=
+    `<p><b>Safe:</b> ${d.safe}</p><p>${d.message}</p>`;
+  });
+};
+
+/* ---------- DETECTION ---------- */
+document.getElementById("detect-method").onchange=function(){
+  document.getElementById("wait-for-input").style.display=this.value==="wait_for_graph"?"block":"none";
+  document.getElementById("resource-alloc-input").style.display=this.value==="resource_allocation"?"block":"none";
+};
+document.getElementById("add-edge").onclick=function(){
+  document.getElementById("wait-for-edges").insertAdjacentHTML("beforeend",
+  `<div class="row mb-2"><div class="col"><input class="form-control" value="P1"></div><div class="col"><input class="form-control" value="P2"></div></div>`);
+};
+document.getElementById("run-detect").onclick=function(){
+  const graph={};
+  document.querySelectorAll("#wait-for-edges .row").forEach(e=>{
+    graph[e.children[0].children[0].value]=[e.children[1].children[0].value];
+  });
+  fetch("/deadlock/detect",{method:"POST",headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({method:"wait_for_graph",wait_for_graph:graph})})
+  .then(r=>r.json()).then(d=>{
+    document.getElementById("detect-results").innerHTML=
+    `<p><b>Deadlock:</b> ${d.deadlock_detected}</p><p>${d.message}</p>`;
+  });
+};
+
+/* ---------- REQUEST ---------- */
+document.getElementById("add-resource-request").onclick=function(){
+  document.getElementById("resources-request").insertAdjacentHTML("beforeend",
+  `<div class="row mb-2"><div class="col"><input class="form-control" value="R1"></div><div class="col"><input class="form-control" value="10"></div></div>`);
+};
+document.getElementById("add-process-request").onclick=function(){
+  document.getElementById("processes-request").insertAdjacentHTML("beforeend",
+  `<div class="row mb-2"><div class="col"><input class="form-control" value="P1"></div><div class="col"><input class="form-control" value="5,4,3"></div><div class="col"><input class="form-control" value="0,1,0"></div></div>`);
+};
+document.getElementById("run-request").onclick=function(){
+  fetch("/deadlock/request",{method:"POST",headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({
+    process_id:document.getElementById("request-process").value,
+    request:document.getElementById("request-resources").value.split(",").map(Number)
+  })})
+  .then(r=>r.json()).then(d=>{
+    document.getElementById("request-results").innerHTML=
+    `<p><b>Granted:</b> ${d.granted}</p><p>${d.message}</p>`;
+  });
+};
+
+</script>
+
+{% endblock %}

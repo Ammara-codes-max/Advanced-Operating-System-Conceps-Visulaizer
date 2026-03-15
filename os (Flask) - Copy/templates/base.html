@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ title if title else "OS Concepts Visualizer" }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Bootstrap 5.3 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Custom Theme -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+</head>
+
+<body>
+
+<!-- ========== SIDEBAR ========== -->
+<div class="sidebar">
+  <div class="sidebar-header">
+    <i class="bi bi-diagram-3-fill"></i>
+    <span>OS Concepts</span>
+  </div>
+
+  <a class="nav-link" href="/cpu_scheduling">
+    <i class="bi bi-cpu"></i> CPU Scheduling
+  </a>
+
+  <a class="nav-link" href="/deadlock">
+    <i class="bi bi-shield-lock"></i> Deadlock Handling
+  </a>
+
+  <a class="nav-link" href="/resource_allocation">
+    <i class="bi bi-diagram-2"></i> Resource Allocation
+  </a>
+
+  <a class="nav-link" href="/memory_management">
+    <i class="bi bi-memory"></i> Memory Management
+  </a>
+
+  <a class="nav-link" href="/file_systems">
+    <i class="bi bi-folder2-open"></i> File Systems
+  </a>
+
+  <a class="nav-link" href="/synchronization">
+    <i class="bi bi-arrow-repeat"></i> Process Sync
+  </a>
+
+  <a class="nav-link" href="/io_management">
+    <i class="bi bi-hdd-network"></i> I/O Management
+  </a>
+
+  <a class="nav-link" href="/processes_threads">
+    <i class="bi bi-diagram-3"></i> Processes & Threads
+  </a>
+</div>
+
+<!-- ========== MAIN CONTENT ========== -->
+<div class="main">
+
+  <!-- 🔥 Clean topbar (NO duplicate heading now) -->
+  <div class="topbar"></div>
+
+  <div class="content">
+    {% block content %}{% endblock %}
+  </div>
+
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Page Specific JS -->
+{% block scripts %}{% endblock %}
+
+</body>
+</html>
